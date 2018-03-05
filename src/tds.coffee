@@ -154,13 +154,6 @@ module.exports = (Connection, Transaction, Request, ConnectionError, Transaction
 				create: (callback) =>
 					c = new tds.Connection cfg
 					
-					c.on 'error', (err) =>
-						if err.code is 'ECONNRESET'
-							c.hasError = true
-							return
-
-						@emit 'error', err
-					
 					timeouted = false
 					tmr = setTimeout ->
 						timeouted = true
@@ -178,7 +171,7 @@ module.exports = (Connection, Transaction, Request, ConnectionError, Transaction
 						callback null, c
 				
 				validate: (c) ->
-					c? and not c.hasError
+					c?
 				
 				destroy: (c) ->
 					c?.end()

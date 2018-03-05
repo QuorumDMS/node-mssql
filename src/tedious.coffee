@@ -239,17 +239,13 @@ module.exports = (Connection, Transaction, Request, ConnectionError, Transaction
 						callback null, c
 					
 					c.on 'error', (err) =>
-						if err.code is 'ESOCKET'
-							c.hasError = true
-							return
-
 						@emit 'error', err
 					
 					if config.debug
 						c.on 'debug', (msg) => @_debug msg
 
 				validate: (c) ->
-					c? and not c.closed and not c.hasError
+					c? and not c.closed
 				
 				destroy: (c) ->
 					c?.close()
@@ -290,13 +286,8 @@ module.exports = (Connection, Transaction, Request, ConnectionError, Transaction
 		_abort: ->
 			if not @_rollbackRequested
 				# transaction interrupted because of XACT_ABORT
-				
-				pc = @_pooledConnection
-				setImmediate =>
-					# defer releasing so connection can switch from SentClientRequest to LoggedIn state
-					@connection.pool.release pc
-					
 				@_pooledConnection.removeListener 'rollbackTransaction', @_abort
+				@connection.pool.release @_pooledConnection
 				@_pooledConnection = null
 				@_aborted = true
 				
@@ -890,7 +881,7 @@ module.exports = (Connection, Transaction, Request, ConnectionError, Transaction
 							return
 						
 						if isChunkedRecordset
-							if columns[JSON_COLUMN_ID] and @connection.config.parseJSON is true
+							if columns[0].metadata.colName is JSON_COLUMN_ID and @connection.config.parseJSON is true
 								try
 									row = JSON.parse chunksBuffer.join ''
 								catch ex
@@ -905,7 +896,7 @@ module.exports = (Connection, Transaction, Request, ConnectionError, Transaction
 							
 							else
 								row = {}
-								row[Object.keys(columns)[0]] = chunksBuffer.join ''
+								row[columns[0].metadata.colName] = chunksBuffer.join ''
 							
 							chunksBuffer = null
 

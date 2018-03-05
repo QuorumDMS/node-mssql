@@ -1,8 +1,8 @@
 # node-mssql
 
-Microsoft SQL Server client for Node.js
+An easy-to-use MSSQL database connector for Node.js.
 
-[![NPM Version][npm-image]][npm-url] [![NPM Downloads][downloads-image]][downloads-url] [![Package Quality][quality-image]][quality-url] [![Travis CI][travis-image]][travis-url] [![Appveyor CI][appveyor-image]][appveyor-url] [![Join the chat at https://gitter.im/patriksimek/node-mssql](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/patriksimek/node-mssql?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![NPM Version][npm-image]][npm-url] [![NPM Downloads][downloads-image]][downloads-url] [![Travis CI][travis-image]][travis-url] [![Appveyor CI][appveyor-image]][appveyor-url] [![Join the chat at https://gitter.im/patriksimek/node-mssql](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/patriksimek/node-mssql?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 **node-mssql**
 - Has unified interface for multiple TDS drivers.
@@ -12,11 +12,10 @@ Microsoft SQL Server client for Node.js
 - Supports serialization of Geography and Geometry CLR types.
 - Has smart JS data type to SQL data type mapper.
 - Supports Promises, Streams and standard callbacks.
-- Supports ES6 tagged template literals.
 - Is stable and tested in production environment.
 - Is well documented.
 
-There is also [co](https://github.com/tj/co) wrapper available - [co-mssql](https://github.com/patriksimek/co-mssql).
+There is also [co](https://github.com/visionmedia/co) wrapper available - [co-mssql](https://github.com/patriksimek/co-mssql).
 If you're looking for session store for connect/express, visit [connect-mssql](https://github.com/patriksimek/connect-mssql).
 
 Supported TDS drivers:
@@ -50,29 +49,19 @@ sql.connect("mssql://username:password@localhost/database").then(function() {
 	new sql.Request()
 	.input('input_parameter', sql.Int, value)
     .output('output_parameter', sql.VarChar(50))
-	.execute('procedure_name').then(function(recordsets) {
-		console.dir(recordsets);
-	}).catch(function(err) {
-		// ... execute error checks
-	});
-	
-	// ES6 Tagged template literals (experimental)
-	
-	sql.query`select * from mytable where id = ${value}`.then(function(recordset) {
+	.execute('procedure_name').then(function(recordset) {
 		console.dir(recordset);
 	}).catch(function(err) {
-		// ... query error checks
+		// ... execute error checks
 	});
 }).catch(function(err) {
 	// ... connect error checks
 });
 ```
 
-If you're on Windows Azure, add `?encrypt=true` to your connection string. See [docs](#cfg) to learn more.
+If you're on Windows Azure, add `?encrypt=true` to you connection string. See [docs](#cfg) to learn more.
 
 ## Documentation
-
-* [2.x to 3.x changes](#twotothree)
 
 ### Examples
 
@@ -164,9 +153,8 @@ var config = {
 sql.connect(config).then(function() {
 	// Query
 	
-	new sql.Request();
-	.input('input_parameter', sql.Int, value);
-	.query('select * from mytable where id = @input_parameter').then(function(recordset) {
+	var request = new sql.Request();
+	request.query('select * from mytable').then(function(recordset) {
 		console.dir(recordset);
 	}).catch(function(err) {
 		// ... error checks
@@ -174,11 +162,11 @@ sql.connect(config).then(function() {
 
     // Stored Procedure
 	
-	new sql.Request();
-	.input('input_parameter', sql.Int, value);
-    .output('output_parameter', sql.VarChar(50));
-	.execute('procedure_name').then(function(recordsets) {
-		console.dir(recordsets);
+	var request = new sql.Request();
+	request.input('input_parameter', sql.Int, value);
+    request.output('output_parameter', sql.VarChar(50));
+	request.execute('procedure_name').then(function(recordset) {
+		console.dir(recordset);
 	}).catch(function(err) {
 		// ... error checks
 	});
@@ -188,22 +176,6 @@ sql.connect(config).then(function() {
 ```
 
 Native Promise is used by default. You can easily change this with `sql.Promise = require('myownpromisepackage')`.
-
-**ES6 Tagged template literals (experimental)**
-
-```javascript
-sql.connect(config).then(function() {
-	sql.query`select * from mytable where id = ${value}`.then(function(recordset) {
-		console.dir(recordset);
-	}).catch(function(err) {
-		// ... error checks
-	});
-}).catch(function(err) {
-	// ... error checks
-});
-```
-
-All values are automatically sanitized against sql injection.
 
 <a name="callbacks" />
 ### Nested callbacks
@@ -227,7 +199,8 @@ sql.connect(config, function(err) {
 
     // Query
 
-    new sql.Request().query('select 1 as number', function(err, recordset) {
+    var request = new sql.Request();
+    request.query('select 1 as number', function(err, recordset) {
         // ... error checks
 
         console.dir(recordset);
@@ -235,10 +208,10 @@ sql.connect(config, function(err) {
 
     // Stored Procedure
 
-    new sql.Request()
-    .input('input_parameter', sql.Int, value)
-    .output('output_parameter', sql.VarChar(50))
-    .execute('procedure_name', function(err, recordsets, returnValue) {
+    var request = new sql.Request();
+    request.input('input_parameter', sql.Int, value);
+    request.output('output_parameter', sql.VarChar(50));
+    request.execute('procedure_name', function(err, recordsets, returnValue) {
         // ... error checks
 
         console.dir(recordsets);
@@ -289,7 +262,7 @@ sql.connect(config, function(err) {
     	// May be emitted multiple times
     });
 
-    request.on('done', function(affected) {
+    request.on('done', function(returnValue) {
     	// Always emitted as the last one
     });
 });
@@ -353,22 +326,6 @@ connection2.on('error', function(err) {
 	// ... error handler
 });
 ```
-
-**ES6 Tagged template literals (experimental)**
-
-```javascript
-new sql.Connection(config).connect().then(function(conn) {
-	conn.query`select * from mytable where id = ${value}`.then(function(recordset) {
-		console.dir(recordset);
-	}).catch(function(err) {
-		// ... error checks
-	});
-}).catch(function(err) {
-	// ... error checks
-});
-```
-
-All values are automatically sanitized against sql injection.
 
 <a name="cfg" />
 ## Configuration
@@ -471,7 +428,7 @@ Driver={SQL Server Native Client 11.0};Server={#{server}\\#{instance}};Database=
 <a name="cfg-msnodesql" />
 ### Microsoft Driver for Node.js for SQL Server
 
-**Requires Node.js 0.6.x/0.8.x/0.10.x. Windows only.** This driver is not part of the default package and must be installed separately by `npm install msnodesql`. If you are looking for compiled binaries, see [node-sqlserver-binary](https://github.com/jorgeazevedo/node-sqlserver-unofficial).
+**Requires Node.js 0.6.x/0.8.x/0.10.x. Windows only.** This driver is not part of the default package and must be installed separately by `npm install msnodesql`. If you are looking for compiled binaries, see [node-sqlserver-binary](https://github.com/jorgeazevedo/node-sqlserver-binary).
 
 **Extra options:**
 
@@ -598,15 +555,13 @@ __Example__
 var request = new sql.Request();
 request.input('input_parameter', sql.Int, value);
 request.output('output_parameter', sql.Int);
-request.execute('procedure_name', function(err, recordsets, returnValue, affected) {
+request.execute('procedure_name', function(err, recordsets, returnValue) {
     // ... error checks
 
     console.log(recordsets.length); // count of recordsets returned by the procedure
     console.log(recordsets[0].length); // count of rows contained in first recordset
     console.log(returnValue); // procedure return value
     console.log(recordsets.returnValue); // same as previous line
-    console.log(affected); // number of rows affected by the statemens
-    console.log(recordsets.rowsAffected); // same as previous line
 
     console.log(request.parameters.output_parameter.value); // output value
 
@@ -765,7 +720,7 @@ You can enable multiple recordsets in queries with the `request.multiple = true`
 var request = new sql.Request();
 request.multiple = true;
 
-request.query('select 1 as number; select 2 as number', function(err, recordsets, affected) {
+request.query('select 1 as number; select 2 as number', function(err, recordsets) {
     // ... error checks
 
     console.log(recordsets[0][0].number); // return 1
@@ -827,7 +782,7 @@ __Example__
 ```javascript
 var table = new sql.Table('table_name'); // or temporary table, e.g. #temptable
 table.create = true;
-table.columns.add('a', sql.Int, {nullable: true, primary: true});
+table.columns.add('a', sql.Int, {nullable: true});
 table.columns.add('b', sql.VarChar(50), {nullable: false});
 table.rows.add(777, 'test');
 
@@ -839,7 +794,7 @@ request.bulk(table, function(err, rowCount) {
 
 **IMPORTANT**: Always indicate whether the column is nullable or not!
 
-**TIP**: If you set `table.create` to `true`, module will check if the table exists before it start sending data. If it doesn't, it will automatically create it. You can specify primary key columns by setting `primary: true` to column's options. Primary key constraint on multiple columns is supported.
+**TIP**: If you set `table.create` to `true`, module will check if the table exists before it start sending data. If it doesn't, it will automatically create it.
 
 **TIP**: You can also create Table variable from any recordset with `recordset.toTable()`.
 
@@ -1163,10 +1118,6 @@ ps.prepare('select @param as value', function(err) {
 
         console.log(recordset[0].value); // return 12345
         console.log(affected); // Returns number of affected rows in case of INSERT, UPDATE or DELETE statement.
-        
-        ps.unprepare(function(err) {
-            // ... error checks
-        });
     });
 });
 ```
@@ -1185,10 +1136,6 @@ ps.prepare('select @param as value', function(err) {
 
         console.log(recordsets[0][0].value); // return 12345
         console.log(affected); // Returns number of affected rows in case of INSERT, UPDATE or DELETE statement.
-        
-        ps.unprepare(function(err) {
-            // ... error checks
-        });
     });
 });
 ```
@@ -1220,10 +1167,6 @@ ps.prepare('select @param as value', function(err) {
     	// Always emitted as the last one
     	
         console.log(affected); // Returns number of affected rows in case of INSERT, UPDATE or DELETE statement.
-        
-        ps.unprepare(function(err) {
-            // ... error checks
-        });
     });
 });
 ```
@@ -1418,12 +1361,8 @@ request.on('done', function(affected) {
 
 **NOTE**: If your query contains multiple `INSERT`, `UPDATE` or `DELETE` statements, the number of affected rows is a sum of all of them.
 
-__Version__
-
-3.0
-
 <a name="json" />
-## JSON support (works only with Tedious driver)
+## JSON support (experimental, works only with Tedious driver)
 
 SQL Server 2016 introduced built-in JSON serialization. By default, JSON is returned as a plain text in a special column named `JSON_F52E2B61-18A1-11d1-B105-00805F49916B`.
 
@@ -1688,7 +1627,7 @@ Output for the example above could look similar to this.
 ### msnodesql
 
 - msnodesql has problem with errors during transactions - [reported](https://github.com/patriksimek/node-mssql/issues/77).
-- msnodesql contains bug in DateTimeOffset ([reported](https://github.com/Azure/node-sqlserver/issues/160))
+- msnodesql contains bug in DateTimeOffset ([reported](https://github.com/WindowsAzure/node-sqlserver/issues/160))
 - msnodesql doesn't support [Bulk](#bulk) load.
 - msnodesql doesn't support [TVP](#tvp) data type.
 - msnodesql doesn't support Variant data type.
@@ -1716,53 +1655,10 @@ Output for the example above could look similar to this.
 - node-tds doesn't support [detailed SQL errors](#detailed-sql-errors).
 - node-tds doesn't support [Affected Rows](#affected-rows)
 
-<a name="twotothree" />
-## 2.x to 3.x changes
-
-### Prepared Statement
-
-* [`execute`](#prepared-statement-execute) method now returns 3 arguments instead of 2.
-
-    ```javascript
-    ps.execute(values, function(err, recordset, affected) { });
-    ```
-
-    When streaming, `done` event now returns 2 arguments instead of 1.
-
-    ```javascript
-    request.on('done', function(returnValue, affected) { });
-    ```
-
-### Request
-
-* [`execute`](#execute) method now returns 4 arguments instead of 3.
-
-    ```javascript
-    ps.execute(values, function(err, recordset, returnValue, affected) { });
-    ```
-
-    When streaming, `done` event now returns 2 arguments instead of 1.
-
-    ```javascript
-    request.on('done', function(returnValue, affected) { });
-    ```
-
-* [`query`](#query) method now returns 3 arguments instead of 2.
-
-    ```javascript
-    ps.execute(values, function(err, recordset, affected) { });
-    ```
-
-    When streaming, `done` event now returns 1 argument.
-
-    ```javascript
-    request.on('done', function(affected) { });
-    ```
-
 <a name="license" />
 ## License
 
-Copyright (c) 2013-2016 Patrik Simek
+Copyright (c) 2013-2015 Patrik Simek
 
 The MIT License
 
@@ -1776,8 +1672,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 [npm-url]: https://www.npmjs.com/package/mssql
 [downloads-image]: https://img.shields.io/npm/dm/mssql.svg?style=flat-square
 [downloads-url]: https://www.npmjs.com/package/mssql
-[quality-image]: http://npm.packagequality.com/shield/mssql.svg?style=flat-square
-[quality-url]: http://packagequality.com/#?package=mssql
 [david-image]: https://img.shields.io/david/patriksimek/node-mssql.svg?style=flat-square
 [david-url]: https://david-dm.org/patriksimek/node-mssql
 [travis-image]: https://img.shields.io/travis/patriksimek/node-mssql/master.svg?style=flat-square&label=unit
